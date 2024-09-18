@@ -56,11 +56,21 @@ export async function run() {
     const issue = await jira.findIssue(jiraIssueKey);
     const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
 
-    // Comment on PR with Jira issue link
+    // Prepare the comment body with issue details
+    const commentBody = `
+Related Jira issue: [${jiraIssueKey}](${issueUrl})
+
+**Summary:** ${issue.fields.summary}
+
+**Description:**
+${issue.fields.description || "No description provided."}
+    `.trim();
+
+    // Comment on PR with Jira issue link and details
     await octokit.rest.issues.createComment({
       ...github.context.repo,
       issue_number: pull_request.number,
-      body: `Related Jira issue: [${jiraIssueKey}](${issueUrl})\n\n${issue.fields.summary}`,
+      body: commentBody,
     });
   } catch (error) {
     if (error instanceof Error) {
