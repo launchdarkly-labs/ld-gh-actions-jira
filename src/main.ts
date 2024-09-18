@@ -9,9 +9,13 @@ export async function run() {
     const jiraApiToken = core.getInput("jira-api-token", { required: true });
 
     const octokit = github.getOctokit(githubToken);
+
+    // Parse the Jira base URL to extract the host
+    const jiraHost = new URL(jiraBaseUrl).hostname;
+
     const jira = new JiraApi({
       protocol: "https",
-      host: jiraBaseUrl,
+      host: jiraHost,
       bearer: jiraApiToken,
       apiVersion: "2",
       strictSSL: true,
@@ -49,7 +53,7 @@ export async function run() {
 
     // Get Jira issue details
     const issue = await jira.findIssue(jiraIssueKey);
-    const issueUrl = `https://${jiraBaseUrl}/browse/${jiraIssueKey}`;
+    const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
 
     // Comment on PR with Jira issue link
     await octokit.rest.issues.createComment({
