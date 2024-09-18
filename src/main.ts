@@ -68,17 +68,22 @@ Related Jira issue: [[${jiraIssueKey}]: ${issue.fields.summary}](${issueUrl})
       issue_number: pull_request.number,
     });
 
-    const existingComment = existingComments.data.find((comment) =>
-      comment.body.includes(`Related Jira issue: [${jiraIssueKey}]`)
+    const existingComment = existingComments.data.find(
+      (comment) =>
+        comment.body?.includes(`Related Jira issue: [${jiraIssueKey}]`) ?? false
     );
 
     if (existingComment) {
-      // Update existing comment
-      await octokit.rest.issues.updateComment({
-        ...github.context.repo,
-        comment_id: existingComment.id,
-        body: commentBody,
-      });
+      // Only update if the comment body is different
+      if (existingComment.body !== commentBody) {
+        await octokit.rest.issues.updateComment({
+          ...github.context.repo,
+          comment_id: existingComment.id,
+          body: commentBody,
+        });
+      } else {
+        core.info("Existing comment is up to date. No update needed.");
+      }
     } else {
       // Create new comment
       await octokit.rest.issues.createComment({
