@@ -87398,7 +87398,7 @@ async function run() {
         const jira = new jira_client_1.default({
             protocol: "https",
             host: jiraHost,
-            username: "api_token", // This is a placeholder, not the actual username
+            username: "hbarrow@launchdarkly.com", // This is a placeholder, not the actual username
             password: jiraApiToken,
             apiVersion: "2",
             strictSSL: true,
