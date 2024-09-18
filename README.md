@@ -25,11 +25,28 @@ This GitHub Action automatically links Jira issues to pull requests by updating 
 
 3. Create a new workflow file (e.g., `.github/workflows/jira-link.yml`) in your repository:
 
+```yaml
+name: Jira Issue Linker
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  jira-issue-link:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: your-github-username/jira-issue-linker-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          jira-base-url: ${{ secrets.JIRA_BASE_URL }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
+          jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
+```
+
 ## Usage
 
 Once you've set up the workflow, the action will run automatically on every pull request event (when opened, edited, or synchronized). No further action is required.
-
-## Inputs
 
 ## Inputs
 
