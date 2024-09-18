@@ -87383,6 +87383,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = run;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const jira_client_1 = __importDefault(__nccwpck_require__(6411));
@@ -87390,14 +87391,12 @@ async function run() {
     try {
         const githubToken = core.getInput("github-token", { required: true });
         const jiraBaseUrl = core.getInput("jira-base-url", { required: true });
-        const jiraEmail = core.getInput("jira-email", { required: true });
         const jiraApiToken = core.getInput("jira-api-token", { required: true });
         const octokit = github.getOctokit(githubToken);
         const jira = new jira_client_1.default({
             protocol: "https",
             host: jiraBaseUrl,
-            username: jiraEmail,
-            password: jiraApiToken,
+            bearer: jiraApiToken,
             apiVersion: "2",
             strictSSL: true,
         });
@@ -87443,7 +87442,10 @@ async function run() {
         }
     }
 }
-run();
+// Call run() at the end of the file if it's the main module
+if (require.main === require.cache[eval('__filename')]) {
+    run();
+}
 
 
 /***/ }),
