@@ -87432,7 +87432,7 @@ async function run() {
         const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
         // Prepare the comment body with issue details
         const commentBody = `
-Related Jira issue: [${jiraIssueKey}]([${issueUrl}]: ${issue.fields.summary})
+Related Jira issue: [[${jiraIssueKey}]: ${issue.fields.summary}](${issueUrl})
     `.trim();
         // Comment on PR with Jira issue link and details
         await octokit.rest.issues.createComment({
