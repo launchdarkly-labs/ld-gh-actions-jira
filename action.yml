@@ -7,6 +7,9 @@ inputs:
   jira-base-url:
     description: "Jira base URL (e.g., mycompany.atlassian.net)"
     required: true
+  jira-username:
+    description: "Jira username (usually an email address)"
+    required: true
   jira-api-token:
     description: "Jira API token"
     required: true

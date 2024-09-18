@@ -6,7 +6,7 @@ This GitHub Action automatically links Jira issues to pull requests by updating 
 
 - Parses Jira issue keys from PR branch names and titles
 - Adds the Jira issue key to the PR title if not already present
-- Comments on the PR with a link to the Jira issue and its summary
+- Comments on the PR with a link to the Jira issue, its summary, and description
 
 ## Setup
 
@@ -20,6 +20,7 @@ This GitHub Action automatically links Jira issues to pull requests by updating 
 2. Add the following secrets to your GitHub repository:
 
    - `JIRA_BASE_URL`: Your Jira instance URL (e.g., `https://your-domain.atlassian.net`)
+   - `JIRA_USERNAME`: Your Jira username (usually your email address)
    - `JIRA_API_TOKEN`: The API token you created in step 1
 
 3. Create a new workflow file (e.g., `.github/workflows/jira-link.yml`) in your repository:
@@ -30,10 +31,13 @@ Once you've set up the workflow, the action will run automatically on every pull
 
 ## Inputs
 
+## Inputs
+
 | Input            | Description                                                        | Required |
 | ---------------- | ------------------------------------------------------------------ | -------- |
 | `github-token`   | GitHub token for authentication                                    | Yes      |
 | `jira-base-url`  | Your Jira instance URL (e.g., `https://your-domain.atlassian.net`) | Yes      |
+| `jira-username`  | Your Jira username (usually your email address)                    | Yes      |
 | `jira-api-token` | Jira API token for authentication                                  | Yes      |
 
 ## Example
