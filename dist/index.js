@@ -87383,6 +87383,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = run;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const jira_client_1 = __importDefault(__nccwpck_require__(6411));
@@ -87390,13 +87391,14 @@ async function run() {
     try {
         const githubToken = core.getInput("github-token", { required: true });
         const jiraBaseUrl = core.getInput("jira-base-url", { required: true });
-        const jiraEmail = core.getInput("jira-email", { required: true });
         const jiraApiToken = core.getInput("jira-api-token", { required: true });
         const octokit = github.getOctokit(githubToken);
+        // Parse the Jira base URL to extract the host
+        const jiraHost = new URL(jiraBaseUrl).hostname;
         const jira = new jira_client_1.default({
             protocol: "https",
-            host: jiraBaseUrl,
-            username: jiraEmail,
+            host: jiraHost,
+            username: "hbarrow@launchdarkly.com", // This is a placeholder, not the actual username
             password: jiraApiToken,
             apiVersion: "2",
             strictSSL: true,
@@ -87426,7 +87428,7 @@ async function run() {
         }
         // Get Jira issue details
         const issue = await jira.findIssue(jiraIssueKey);
-        const issueUrl = `https://${jiraBaseUrl}/browse/${jiraIssueKey}`;
+        const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
         // Comment on PR with Jira issue link
         await octokit.rest.issues.createComment({
             ...github.context.repo,
@@ -87443,7 +87445,10 @@ async function run() {
         }
     }
 }
-run();
+// Call run() at the end of the file if it's the main module
+if (require.main === require.cache[eval('__filename')]) {
+    run();
+}
 
 
 /***/ }),
