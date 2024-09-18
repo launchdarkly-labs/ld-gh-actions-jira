@@ -36,7 +36,7 @@ jobs:
   jira-issue-link:
     runs-on: ubuntu-latest
     steps:
-      - uses: your-github-username/jira-issue-linker-action@v1
+      - uses: launchdarkly-labs/ld-gh-actions-jira@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           jira-base-url: ${{ secrets.JIRA_BASE_URL }}
