@@ -6,6 +6,7 @@ export async function run() {
   try {
     const githubToken = core.getInput("github-token", { required: true });
     const jiraBaseUrl = core.getInput("jira-base-url", { required: true });
+    const jiraUsername = core.getInput("jira-username", { required: true });
     const jiraApiToken = core.getInput("jira-api-token", { required: true });
 
     const octokit = github.getOctokit(githubToken);
@@ -16,7 +17,7 @@ export async function run() {
     const jira = new JiraApi({
       protocol: "https",
       host: jiraHost,
-      username: "hbarrow@launchdarkly.com", // This is a placeholder, not the actual username
+      username: jiraUsername,
       password: jiraApiToken,
       apiVersion: "2",
       strictSSL: true,
@@ -58,12 +59,7 @@ export async function run() {
 
     // Prepare the comment body with issue details
     const commentBody = `
-Related Jira issue: [${jiraIssueKey}](${issueUrl})
-
-**Summary:** ${issue.fields.summary}
-
-**Description:**
-${issue.fields.description || "No description provided."}
+Related Jira issue: [${jiraIssueKey}]([${issueUrl}]: ${issue.fields.summary})
     `.trim();
 
     // Comment on PR with Jira issue link and details

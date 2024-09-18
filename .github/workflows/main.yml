@@ -18,4 +18,5 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           jira-base-url: ${{ secrets.JIRA_BASE_URL }}
+          jira-username: ${{ secrets.JIRA_USERNAME }}
           jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
