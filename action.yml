@@ -1,0 +1,15 @@
+name: "Jira Issue Linker"
+description: "Links Jira issues to GitHub pull requests"
+inputs:
+  github-token:
+    description: "GitHub token"
+    required: true
+  jira-base-url:
+    description: "Jira base URL (e.g., mycompany.atlassian.net)"
+    required: true
+  jira-api-token:
+    description: "Jira API token"
+    required: true
+runs:
+  using: "node20"
+  main: "dist/index.js"
