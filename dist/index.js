@@ -87432,14 +87432,35 @@ async function run() {
         const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
         // Prepare the comment body with issue details
         const commentBody = `
-Related Jira issue: [[${jiraIssueKey}]: ${issue.fields.summary}](${issueUrl})
+Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
     `.trim();
-        // Comment on PR with Jira issue link and details
-        await octokit.rest.issues.createComment({
+        // Check for existing comment
+        const existingComments = await octokit.rest.issues.listComments({
             ...github.context.repo,
             issue_number: pull_request.number,
-            body: commentBody,
         });
+        const existingComment = existingComments.data.find((comment) => comment.body?.includes(`Related Jira issue: [${jiraIssueKey}]`) ?? false);
+        if (existingComment) {
+            // Only update if the comment body is different
+            if (existingComment.body !== commentBody) {
+                await octokit.rest.issues.updateComment({
+                    ...github.context.repo,
+                    comment_id: existingComment.id,
+                    body: commentBody,
+                });
+            }
+            else {
+                core.info("Existing comment is up to date. No update needed.");
+            }
+        }
+        else {
+            // Create new comment
+            await octokit.rest.issues.createComment({
+                ...github.context.repo,
+                issue_number: pull_request.number,
+                body: commentBody,
+            });
+        }
     }
     catch (error) {
         if (error instanceof Error) {
