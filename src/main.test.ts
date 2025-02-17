@@ -42,9 +42,13 @@ describe("Jira Issue Linker Action", () => {
         case "github-token":
           return "mock-token";
         case "jira-base-url":
-          return "mock-jira-url";
+          return "https://mock-jira-url";
+        case "jira-username":
+          return "mock-username";
         case "jira-api-token":
           return "mock-api-token";
+        case "update-description":
+          return "false";
         default:
           return "";
       }
@@ -53,10 +57,12 @@ describe("Jira Issue Linker Action", () => {
     mockOctokit = {
       rest: {
         pulls: {
-          update: jest.fn().mockResolvedValue({}),
+          update: jest.fn().mockResolvedValue({ data: {} }),
         },
         issues: {
-          createComment: jest.fn().mockResolvedValue({}),
+          createComment: jest.fn().mockResolvedValue({ data: {} }),
+          listComments: jest.fn().mockResolvedValue({ data: [] }),
+          updateComment: jest.fn().mockResolvedValue({ data: {} }),
         },
       },
     };
@@ -64,6 +70,7 @@ describe("Jira Issue Linker Action", () => {
 
     mockJiraClient = {
       findIssue: jest.fn().mockResolvedValue({
+        key: "TEST-123",
         fields: { summary: "Test Jira Issue" },
       }),
     } as unknown as jest.Mocked<JiraApi>;
@@ -96,7 +103,13 @@ describe("Jira Issue Linker Action", () => {
     await run();
 
     expect(mockOctokit.rest.pulls.update).not.toHaveBeenCalled();
-    expect(mockOctokit.rest.issues.createComment).toHaveBeenCalled();
+    expect(mockOctokit.rest.issues.listComments).toHaveBeenCalled();
+    expect(mockOctokit.rest.issues.createComment).toHaveBeenCalledWith({
+      owner: "testowner",
+      repo: "testrepo",
+      issue_number: 1,
+      body: expect.stringContaining("TEST-123"),
+    });
   });
 
   it("should warn if no Jira issue key is found", async () => {
@@ -121,5 +134,146 @@ describe("Jira Issue Linker Action", () => {
     await run();
 
     expect(mockSetFailed).toHaveBeenCalledWith("Test error");
+  });
+
+  describe("when update-description is true", () => {
+    beforeEach(() => {
+      jest.resetAllMocks();
+      const mockGetBooleanInput = core.getBooleanInput as jest.MockedFunction<
+        typeof core.getBooleanInput
+      >;
+      mockGetBooleanInput.mockReturnValue(true);
+
+      github.context.payload = {
+        pull_request: {
+          number: 1,
+          title: "Test PR",
+          head: { ref: "feature/TEST-123-new-feature" },
+        },
+      };
+
+      Object.defineProperty(github.context, "repo", {
+        value: { owner: "testowner", repo: "testrepo" },
+        configurable: true,
+      });
+
+      mockGetInput.mockImplementation((name) => {
+        switch (name) {
+          case "github-token":
+            return "mock-token";
+          case "jira-base-url":
+            return "https://mock-jira-url";
+          case "jira-username":
+            return "mock-username";
+          case "jira-api-token":
+            return "mock-api-token";
+          default:
+            return "";
+        }
+      });
+
+      mockOctokit = {
+        rest: {
+          pulls: {
+            update: jest.fn().mockResolvedValue({ data: {} }),
+          },
+          issues: {
+            createComment: jest.fn().mockResolvedValue({ data: {} }),
+            listComments: jest.fn().mockResolvedValue({ data: [] }),
+            updateComment: jest.fn().mockResolvedValue({ data: {} }),
+          },
+        },
+      };
+      mockGetOctokit.mockReturnValue(mockOctokit);
+
+      mockJiraClient = {
+        findIssue: jest.fn().mockResolvedValue({
+          key: "TEST-123",
+          fields: { summary: "Test Jira Issue" },
+        }),
+      } as unknown as jest.Mocked<JiraApi>;
+      (JiraApi as jest.MockedClass<typeof JiraApi>).mockImplementation(
+        () => mockJiraClient
+      );
+    });
+
+    it("should update PR description when no existing Jira section exists", async () => {
+      github.context.payload.pull_request!.title = "[TEST-123] Test PR";
+      github.context.payload.pull_request!.body = "Original description";
+
+      await run();
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(1);
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
+        owner: "testowner",
+        repo: "testrepo",
+        pull_number: 1,
+        body: expect.stringMatching(
+          /Original description\n\nRelated Jira issue: \[TEST-123\].*/
+        ),
+      });
+      expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
+
+    it("should update existing Jira section in PR description", async () => {
+      github.context.payload.pull_request!.title = "[TEST-123] Test PR";
+      github.context.payload.pull_request!.body =
+        "Original description\n\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)";
+
+      await run();
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(1);
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
+        owner: "testowner",
+        repo: "testrepo",
+        pull_number: 1,
+        body: expect.stringMatching(
+          /Original description\n\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*/
+        ),
+      });
+      expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
+
+    it("should create PR description if none exists", async () => {
+      github.context.payload.pull_request!.title = "[TEST-123] Test PR";
+      github.context.payload.pull_request!.body = "";
+
+      await run();
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(1);
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
+        owner: "testowner",
+        repo: "testrepo",
+        pull_number: 1,
+        body: expect.stringMatching(
+          /Related Jira issue: \[TEST-123\].*Test Jira Issue.*/
+        ),
+      });
+      expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
+
+    it("should update both title and description when title needs updating", async () => {
+      github.context.payload.pull_request!.title = "Test PR";
+      github.context.payload.pull_request!.body = "Original description";
+
+      await run();
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(2);
+      expect(mockOctokit.rest.pulls.update).toHaveBeenNthCalledWith(1, {
+        owner: "testowner",
+        repo: "testrepo",
+        pull_number: 1,
+        title: "[TEST-123] Test PR",
+      });
+      expect(mockOctokit.rest.pulls.update).toHaveBeenNthCalledWith(2, {
+        owner: "testowner",
+        repo: "testrepo",
+        pull_number: 1,
+        body: expect.stringMatching(
+          /Original description\n\nRelated Jira issue: \[TEST-123\].*/
+        ),
+      });
+      expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
   });
 });
