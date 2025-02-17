@@ -87438,17 +87438,19 @@ Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
         if (updateDescription) {
             // Update PR description
             const currentBody = pull_request.body || "";
-            const jiraSection = /Related Jira issue: \[[A-Z]+-\d+\].*$/m;
+            const jiraSection = /## Jira Issue\n.*?(?=##|$)/s;
+            // Format Jira content with markdown header
+            const formattedJiraContent = `## Jira Issue\n${jiraContent}\n`;
             let newBody;
             if (jiraSection.test(currentBody)) {
                 // Replace existing Jira section
-                newBody = currentBody.replace(jiraSection, jiraContent);
+                newBody = currentBody.replace(jiraSection, formattedJiraContent);
             }
             else {
-                // Add Jira content at the end
+                // Add Jira content as a new section
                 newBody = currentBody
-                    ? `${currentBody}\n\n${jiraContent}`
-                    : jiraContent;
+                    ? `${currentBody}\n\n${formattedJiraContent}`
+                    : formattedJiraContent;
             }
             await octokit.rest.pulls.update({
                 ...github.context.repo,
