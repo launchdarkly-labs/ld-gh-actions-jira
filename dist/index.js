@@ -87393,6 +87393,7 @@ async function run() {
         const jiraBaseUrl = core.getInput("jira-base-url", { required: true });
         const jiraUsername = core.getInput("jira-username", { required: true });
         const jiraApiToken = core.getInput("jira-api-token", { required: true });
+        const updateDescription = core.getBooleanInput("update-description", { required: false }) || false;
         const octokit = github.getOctokit(githubToken);
         // Parse the Jira base URL to extract the host
         const jiraHost = new URL(jiraBaseUrl).hostname;
@@ -87430,36 +87431,60 @@ async function run() {
         // Get Jira issue details
         const issue = await jira.findIssue(jiraIssueKey);
         const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
-        // Prepare the comment body with issue details
-        const commentBody = `
+        // Prepare the content with issue details
+        const jiraContent = `
 Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
     `.trim();
-        // Check for existing comment
-        const existingComments = await octokit.rest.issues.listComments({
-            ...github.context.repo,
-            issue_number: pull_request.number,
-        });
-        const existingComment = existingComments.data.find((comment) => comment.body?.includes(`Related Jira issue: [${jiraIssueKey}]`) ?? false);
-        if (existingComment) {
-            // Only update if the comment body is different
-            if (existingComment.body !== commentBody) {
-                await octokit.rest.issues.updateComment({
-                    ...github.context.repo,
-                    comment_id: existingComment.id,
-                    body: commentBody,
-                });
+        if (updateDescription) {
+            // Update PR description
+            const currentBody = pull_request.body || "";
+            const jiraSection = /Related Jira issue: \[[A-Z]+-\d+\].*$/m;
+            let newBody;
+            if (jiraSection.test(currentBody)) {
+                // Replace existing Jira section
+                newBody = currentBody.replace(jiraSection, jiraContent);
             }
             else {
-                core.info("Existing comment is up to date. No update needed.");
+                // Add Jira content at the end
+                newBody = currentBody
+                    ? `${currentBody}\n\n${jiraContent}`
+                    : jiraContent;
             }
+            await octokit.rest.pulls.update({
+                ...github.context.repo,
+                pull_number: pull_request.number,
+                body: newBody,
+            });
         }
         else {
-            // Create new comment
-            await octokit.rest.issues.createComment({
+            // Check for existing comment
+            const existingComments = await octokit.rest.issues.listComments({
                 ...github.context.repo,
                 issue_number: pull_request.number,
-                body: commentBody,
             });
+            const existingComment = existingComments.data.find((comment) => comment.body?.includes(`Related Jira issue: [${jiraIssueKey}]`) ??
+                false);
+            if (existingComment) {
+                // Only update if the comment body is different
+                if (existingComment.body !== jiraContent) {
+                    await octokit.rest.issues.updateComment({
+                        ...github.context.repo,
+                        comment_id: existingComment.id,
+                        body: jiraContent,
+                    });
+                }
+                else {
+                    core.info("Existing comment is up to date. No update needed.");
+                }
+            }
+            else {
+                // Create new comment
+                await octokit.rest.issues.createComment({
+                    ...github.context.repo,
+                    issue_number: pull_request.number,
+                    body: jiraContent,
+                });
+            }
         }
     }
     catch (error) {

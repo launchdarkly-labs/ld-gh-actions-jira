@@ -13,6 +13,10 @@ inputs:
   jira-api-token:
     description: "Jira API token"
     required: true
+  update-description:
+    description: "Whether to update the PR description instead of adding a comment"
+    required: false
+    default: "false"
 runs:
   using: "node20"
   main: "dist/index.js"
