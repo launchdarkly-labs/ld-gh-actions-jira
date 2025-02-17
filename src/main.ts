@@ -67,20 +67,20 @@ Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
     if (updateDescription) {
       // Update PR description
       const currentBody = pull_request.body || "";
-      const jiraSection = /## Jira Issue\n.*?(?=##|$)/s;
+      const jiraFooterRegex = /\n---\nRelated Jira issue:.*$/s;
 
-      // Format Jira content with markdown header
-      const formattedJiraContent = `## Jira Issue\n${jiraContent}\n`;
+      // Format Jira content with footer separator
+      const formattedJiraContent = `\n\n---\n${jiraContent}`;
 
       let newBody;
-      if (jiraSection.test(currentBody)) {
-        // Replace existing Jira section
-        newBody = currentBody.replace(jiraSection, formattedJiraContent);
+      if (jiraFooterRegex.test(currentBody)) {
+        // Replace existing Jira footer
+        newBody = currentBody.replace(jiraFooterRegex, formattedJiraContent);
       } else {
-        // Add Jira content as a new section
+        // Add Jira content as a footer
         newBody = currentBody
-          ? `${currentBody}\n\n${formattedJiraContent}`
-          : formattedJiraContent;
+          ? `${currentBody}${formattedJiraContent}`
+          : jiraContent;
       }
 
       await octokit.rest.pulls.update({
