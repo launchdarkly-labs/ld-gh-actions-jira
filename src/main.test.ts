@@ -209,7 +209,7 @@ describe("Jira Issue Linker Action", () => {
         repo: "testrepo",
         pull_number: 1,
         body: expect.stringMatching(
-          /Original description\n\nRelated Jira issue: \[TEST-123\].*/
+          /Original description\n\n---\nRelated Jira issue: \[TEST-123\].*/
         ),
       });
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
@@ -218,7 +218,7 @@ describe("Jira Issue Linker Action", () => {
     it("should update existing Jira section in PR description", async () => {
       github.context.payload.pull_request!.title = "[TEST-123] Test PR";
       github.context.payload.pull_request!.body =
-        "Original description\n\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)";
+        "Original description\n\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)";
 
       await run();
 
@@ -228,7 +228,7 @@ describe("Jira Issue Linker Action", () => {
         repo: "testrepo",
         pull_number: 1,
         body: expect.stringMatching(
-          /Original description\n\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*/
+          /Original description\n\n---\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*/
         ),
       });
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
@@ -270,7 +270,7 @@ describe("Jira Issue Linker Action", () => {
         repo: "testrepo",
         pull_number: 1,
         body: expect.stringMatching(
-          /Original description\n\nRelated Jira issue: \[TEST-123\].*/
+          /Original description\n\n---\nRelated Jira issue: \[TEST-123\].*/
         ),
       });
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
