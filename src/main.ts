@@ -71,31 +71,15 @@ Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
       // Update PR description
       const currentBody = pull_request.body || "";
 
-      // First check if there's already a Jira section
+      // Remove all existing Jira sections and clean up the content
       const jiraPattern =
-        /(?:\n\n)?<!-- ld-jira-link -->\n---\nRelated Jira issue:.*?<!-- end-ld-jira-link -->/gs;
-      const hasJiraSection = jiraPattern.test(currentBody);
+        /<!-- ld-jira-link -->[\s\S]*?<!-- end-ld-jira-link -->/g;
+      const cleanBody = currentBody.replace(jiraPattern, "").trim();
 
-      // Reset the regex lastIndex
-      jiraPattern.lastIndex = 0;
-
-      let newBody;
-      if (hasJiraSection) {
-        // Replace the first occurrence and remove any others
-        newBody = currentBody
-          .replace(jiraPattern, (match, offset) => {
-            // Only replace the first occurrence with our new content
-            return offset === currentBody.indexOf(match)
-              ? `\n\n${jiraContent}`
-              : "";
-          })
-          .trim();
-      } else {
-        // Add new Jira content if none exists
-        newBody = currentBody
-          ? `${currentBody.trim()}\n\n${jiraContent}`
-          : jiraContent;
-      }
+      // Add the new Jira content
+      const newBody = cleanBody
+        ? `${cleanBody}\n\n${jiraContent}`
+        : jiraContent;
 
       await octokit.rest.pulls.update({
         ...github.context.repo,
