@@ -241,6 +241,33 @@ describe("Jira Issue Linker Action", () => {
 
       await run();
 
+      const expectedBody =
+        "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: expectedBody,
+        })
+      );
+
+      // Verify no duplicate sections exist in the result
+      const updateCall = mockOctokit.rest.pulls.update.mock.calls[0][0];
+      const occurrences = (
+        updateCall.body.match(/<!-- ld-jira-link -->/g) || []
+      ).length;
+      expect(occurrences).toBe(1);
+    });
+
+    it("should handle Jira section without preceding newlines", async () => {
+      github.context.payload.pull_request!.title = "[TEST-123] Test PR";
+      github.context.payload.pull_request!.body =
+        "Original description<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
+
+      await run();
+
       expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
         expect.objectContaining({
           owner: "testowner",
@@ -249,12 +276,6 @@ describe("Jira Issue Linker Action", () => {
           body: "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->",
         })
       );
-      // Verify no duplicate sections exist in the result
-      const updateCall = mockOctokit.rest.pulls.update.mock.calls[0][0];
-      const occurrences = (
-        updateCall.body.match(/<!-- ld-jira-link -->/g) || []
-      ).length;
-      expect(occurrences).toBe(1);
     });
 
     it("should create PR description if none exists", async () => {
