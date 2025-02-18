@@ -61,27 +61,25 @@ export async function run() {
 
     // Prepare the content with issue details
     const jiraContent = `
+<!-- ld-jira-link -->
+---
 Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
+<!-- end-ld-jira-link -->
     `.trim();
 
     if (updateDescription) {
       // Update PR description
       const currentBody = pull_request.body || "";
-      const jiraFooterRegex = /\n---\nRelated Jira issue:.*$/s;
 
-      // Format Jira content with footer separator
-      const formattedJiraContent = `\n\n---\n${jiraContent}`;
+      // Remove all existing Jira sections and clean up the content
+      const jiraPattern =
+        /<!-- ld-jira-link -->[\s\S]*?<!-- end-ld-jira-link -->/g;
+      const cleanBody = currentBody.replace(jiraPattern, "").trim();
 
-      let newBody;
-      if (jiraFooterRegex.test(currentBody)) {
-        // Replace existing Jira footer
-        newBody = currentBody.replace(jiraFooterRegex, formattedJiraContent);
-      } else {
-        // Add Jira content as a footer
-        newBody = currentBody
-          ? `${currentBody}${formattedJiraContent}`
-          : jiraContent;
-      }
+      // Add the new Jira content
+      const newBody = cleanBody
+        ? `${cleanBody}\n\n${jiraContent}`
+        : jiraContent;
 
       await octokit.rest.pulls.update({
         ...github.context.repo,

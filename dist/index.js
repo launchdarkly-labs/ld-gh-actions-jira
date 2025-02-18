@@ -87433,23 +87433,35 @@ async function run() {
         const issueUrl = `${jiraBaseUrl}/browse/${jiraIssueKey}`;
         // Prepare the content with issue details
         const jiraContent = `
+<!-- ld-jira-link -->
+---
 Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
+<!-- end-ld-jira-link -->
     `.trim();
         if (updateDescription) {
             // Update PR description
             const currentBody = pull_request.body || "";
-            const jiraFooterRegex = /\n---\nRelated Jira issue:.*$/s;
-            // Format Jira content with footer separator
-            const formattedJiraContent = `\n\n---\n${jiraContent}`;
+            // First check if there's already a Jira section
+            const jiraPattern = /(?:\n\n)?<!-- ld-jira-link -->\n---\nRelated Jira issue:.*?<!-- end-ld-jira-link -->/gs;
+            const hasJiraSection = jiraPattern.test(currentBody);
+            // Reset the regex lastIndex
+            jiraPattern.lastIndex = 0;
             let newBody;
-            if (jiraFooterRegex.test(currentBody)) {
-                // Replace existing Jira footer
-                newBody = currentBody.replace(jiraFooterRegex, formattedJiraContent);
+            if (hasJiraSection) {
+                // Replace the first occurrence and remove any others
+                newBody = currentBody
+                    .replace(jiraPattern, (match, offset) => {
+                    // Only replace the first occurrence with our new content
+                    return offset === currentBody.indexOf(match)
+                        ? `\n\n${jiraContent}`
+                        : "";
+                })
+                    .trim();
             }
             else {
-                // Add Jira content as a footer
+                // Add new Jira content if none exists
                 newBody = currentBody
-                    ? `${currentBody}${formattedJiraContent}`
+                    ? `${currentBody.trim()}\n\n${jiraContent}`
                     : jiraContent;
             }
             await octokit.rest.pulls.update({
