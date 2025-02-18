@@ -63,13 +63,14 @@ export async function run() {
     const jiraContent = `
 <!-- ld-jira-link -->
 Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
+<!-- end-ld-jira-link -->
     `.trim();
 
     if (updateDescription) {
       // Update PR description
       const currentBody = pull_request.body || "";
       const jiraFooterRegex =
-        /\n*<!-- ld-jira-link -->\nRelated Jira issue:.*$/s;
+        /\n*<!-- ld-jira-link -->\nRelated Jira issue:.*?<!-- end-ld-jira-link -->/s;
 
       // Format Jira content with footer separator
       const formattedJiraContent = `\n\n---\n${jiraContent}`;

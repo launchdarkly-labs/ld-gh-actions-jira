@@ -218,7 +218,7 @@ describe("Jira Issue Linker Action", () => {
     it("should update existing Jira section in PR description", async () => {
       github.context.payload.pull_request!.title = "[TEST-123] Test PR";
       github.context.payload.pull_request!.body =
-        "Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)";
+        "Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
 
       await run();
 
@@ -228,7 +228,7 @@ describe("Jira Issue Linker Action", () => {
         repo: "testrepo",
         pull_number: 1,
         body: expect.stringMatching(
-          /Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*/
+          /Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*<!-- end-ld-jira-link -->/
         ),
       });
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
@@ -237,7 +237,7 @@ describe("Jira Issue Linker Action", () => {
     it("should handle multiple runs without creating duplicate sections", async () => {
       github.context.payload.pull_request!.title = "[TEST-123] Test PR";
       github.context.payload.pull_request!.body =
-        "Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)";
+        "Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
 
       await run();
 
@@ -246,7 +246,7 @@ describe("Jira Issue Linker Action", () => {
         repo: "testrepo",
         pull_number: 1,
         body: expect.stringMatching(
-          /Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*/
+          /Original description\n\n---\n<!-- ld-jira-link -->\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*<!-- end-ld-jira-link -->/
         ),
       });
       // Verify no duplicate sections exist in the result
