@@ -204,34 +204,78 @@ describe("Jira Issue Linker Action", () => {
       await run();
 
       expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(1);
-      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
-        owner: "testowner",
-        repo: "testrepo",
-        pull_number: 1,
-        body: expect.stringMatching(
-          /Original description\n\n---\nRelated Jira issue: \[TEST-123\].*/
-        ),
-      });
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->",
+        })
+      );
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
     });
 
     it("should update existing Jira section in PR description", async () => {
       github.context.payload.pull_request!.title = "[TEST-123] Test PR";
       github.context.payload.pull_request!.body =
-        "Original description\n\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)";
+        "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
 
       await run();
 
       expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(1);
-      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
-        owner: "testowner",
-        repo: "testrepo",
-        pull_number: 1,
-        body: expect.stringMatching(
-          /Original description\n\n---\nRelated Jira issue: \[TEST-123\].*Test Jira Issue.*/
-        ),
-      });
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->",
+        })
+      );
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
+
+    it("should handle multiple runs without creating duplicate sections", async () => {
+      github.context.payload.pull_request!.title = "[TEST-123] Test PR";
+      github.context.payload.pull_request!.body =
+        "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
+
+      await run();
+
+      const expectedBody =
+        "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: expectedBody,
+        })
+      );
+
+      // Verify no duplicate sections exist in the result
+      const updateCall = mockOctokit.rest.pulls.update.mock.calls[0][0];
+      const occurrences = (
+        updateCall.body.match(/<!-- ld-jira-link -->/g) || []
+      ).length;
+      expect(occurrences).toBe(1);
+    });
+
+    it("should handle Jira section without preceding newlines", async () => {
+      github.context.payload.pull_request!.title = "[TEST-123] Test PR";
+      github.context.payload.pull_request!.body =
+        "Original description<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Old summary](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->";
+
+      await run();
+
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->",
+        })
+      );
     });
 
     it("should create PR description if none exists", async () => {
@@ -241,14 +285,14 @@ describe("Jira Issue Linker Action", () => {
       await run();
 
       expect(mockOctokit.rest.pulls.update).toHaveBeenCalledTimes(1);
-      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith({
-        owner: "testowner",
-        repo: "testrepo",
-        pull_number: 1,
-        body: expect.stringMatching(
-          /Related Jira issue: \[TEST-123\].*Test Jira Issue.*/
-        ),
-      });
+      expect(mockOctokit.rest.pulls.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: "<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->",
+        })
+      );
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
     });
 
@@ -265,14 +309,15 @@ describe("Jira Issue Linker Action", () => {
         pull_number: 1,
         title: "[TEST-123] Test PR",
       });
-      expect(mockOctokit.rest.pulls.update).toHaveBeenNthCalledWith(2, {
-        owner: "testowner",
-        repo: "testrepo",
-        pull_number: 1,
-        body: expect.stringMatching(
-          /Original description\n\n---\nRelated Jira issue: \[TEST-123\].*/
-        ),
-      });
+      expect(mockOctokit.rest.pulls.update).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          owner: "testowner",
+          repo: "testrepo",
+          pull_number: 1,
+          body: "Original description\n\n<!-- ld-jira-link -->\n---\nRelated Jira issue: [TEST-123]: [Test Jira Issue](https://mock-jira-url/browse/TEST-123)\n<!-- end-ld-jira-link -->",
+        })
+      );
       expect(mockOctokit.rest.issues.createComment).not.toHaveBeenCalled();
     });
   });
