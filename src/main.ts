@@ -61,20 +61,22 @@ export async function run() {
 
     // Prepare the content with issue details
     const jiraContent = `
+<!-- ld-jira-link -->
 Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
     `.trim();
 
     if (updateDescription) {
       // Update PR description
       const currentBody = pull_request.body || "";
-      const jiraFooterRegex = /\n---\nRelated Jira issue:.*$/s;
+      const jiraFooterRegex =
+        /\n*<!-- ld-jira-link -->\nRelated Jira issue:.*$/s;
 
       // Format Jira content with footer separator
       const formattedJiraContent = `\n\n---\n${jiraContent}`;
 
       let newBody;
       if (jiraFooterRegex.test(currentBody)) {
-        // Replace existing Jira footer
+        // Replace existing Jira footer, ensuring we don't duplicate the separator
         newBody = currentBody.replace(jiraFooterRegex, formattedJiraContent);
       } else {
         // Add Jira content as a footer
@@ -82,6 +84,9 @@ Related Jira issue: [${jiraIssueKey}]: [${issue.fields.summary}](${issueUrl})
           ? `${currentBody}${formattedJiraContent}`
           : jiraContent;
       }
+
+      // Clean up any potential duplicate separators that might have accumulated
+      newBody = newBody.replace(/\n---\n---\n/g, "\n---\n");
 
       await octokit.rest.pulls.update({
         ...github.context.repo,
